@@ -12,6 +12,8 @@
 
 	let domain = $state([0, 100]);
 
+	let nice = $state(false);
+
 	// For the tick steps explanation
 	let start = $derived(domain[0]);
 	let stop = $derived(domain[1]);
@@ -33,12 +35,14 @@
 			.range([marginLeft, width - marginRight])
 	);
 
-	let yScale = $derived(
-		d3
+	let yScale = $derived.by(() => {
+		let yScale = d3
 			.scaleLinear()
 			.domain(domain)
-			.range([height - marginBottom, marginTop])
-	);
+			.range([height - marginBottom, marginTop]);
+
+		return nice ? yScale.nice(count) : yScale;
+	});
 
 	$effect(() => {
 		svgElement.innerHTML = '';
@@ -61,6 +65,10 @@
 
 <div class="container mx-auto space-y-6 p-6">
 	<div class="flex flex-wrap gap-4">
+		<label class="flex flex-col gap-1">
+			<span class="text-sm font-medium text-gray-700">Nice?</span>
+			<input type="checkbox" bind:checked={nice} />
+		</label>
 		<label class="flex flex-col gap-1">
 			<span class="text-sm font-medium text-gray-700">Min domain</span>
 			<input

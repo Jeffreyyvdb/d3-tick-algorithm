@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as d3 from 'd3';
 	import Katex from './Katex.svelte';
+	import { base } from '$app/paths';
 
 	let svgElement: SVGSVGElement;
 	let containerDiv: HTMLDivElement;
@@ -170,7 +171,8 @@
 				function.
 			</p>
 			<p class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
-				Want to know how the nice function works? . See: <a href="/nice">Nice function demo</a>
+				Want to know how the nice function works? . See: <a href="{base}/nice">Nice function demo</a
+				>
 			</p>
 
 			<h2>

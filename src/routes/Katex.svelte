@@ -13,6 +13,6 @@
 	$: katexString = katex.renderToString(math, options);
 </script>
 
-<div class=" my-1 inline-block rounded bg-blue-100 p-1">
+<div class=" m-1 inline-block rounded bg-blue-100 p-1">
 	{@html katexString}
 </div>

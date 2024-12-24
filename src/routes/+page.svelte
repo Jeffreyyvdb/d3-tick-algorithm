@@ -120,8 +120,7 @@
 				console.log({ height, d, range: yScale.range(), domain: yScale.domain() });
 				return height < 0 ? 0 : height;
 			})
-			.attr('width', xScale.bandwidth())
-			.attr('class', 'fill-green-500');
+			.attr('width', xScale.bandwidth());
 
 		return () => {
 			resizeObserver.disconnect();
@@ -133,48 +132,45 @@
 	<!-- Sticky Chart Container -->
 	<div
 		bind:this={containerDiv}
-		class="top-6 w-full rounded-lg border border-gray-200 bg-white p-4 pb-8 shadow-sm lg:sticky lg:h-[calc(100vh-3rem)]"
+		class="top-6 w-full rounded-lg border border-gray-200 p-4 pb-8 shadow-sm lg:sticky lg:h-[calc(100vh-3rem)] dark:border-gray-800"
 	>
-		<div class="mx-4 flex flex-wrap gap-4">
+		<div class="prose mx-4 flex flex-col flex-wrap gap-4 dark:prose-invert">
 			<label class="flex flex-col gap-1">
-				<span class="text-sm font-medium text-gray-700">Min domain</span>
-				<input
-					type="number"
-					bind:value={domain[0]}
-					class="focus:ring-black-500 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2"
-				/>
+				<span class="text-sm font-medium">Min domain</span>
+				<input type="number" class="input" required bind:value={domain[0]} />
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-sm font-medium text-gray-700">Max domain</span>
-				<input
-					type="number"
-					bind:value={domain[1]}
-					class="focus:ring-black-500 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2"
-				/>
+				<span class="text-sm font-medium">Max domain</span>
+				<input type="number" class="input" required bind:value={domain[domain.length - 1]} />
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-sm font-medium text-gray-700">Count</span>
-				<input
-					type="number"
-					bind:value={count}
-					class="focus:ring-black-500 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2"
-				/>
+				<span class="text-sm font-medium">Count</span>
+				<input type="number" class="input" required bind:value={count} />
 			</label>
-			<label class="flex flex-col gap-1">
-				<span class="text-sm font-medium text-gray-700">Nice?</span>
-				<input type="checkbox" bind:checked={nice} />
+			<label class="flex cursor-pointer flex-row items-center">
+				<input type="checkbox" value={nice} bind:checked={nice} class="peer sr-only" />
+				<div
+					class="peer relative h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"
+				></div>
+				<span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Nice function</span>
 			</label>
 		</div>
-		<svg bind:this={svgElement} class="h-full w-full"></svg>
+		<svg
+			bind:this={svgElement}
+			class="h-full w-full fill-red-500 text-[hsl(224_71.4%_4.1%)] dark:text-[hsl(210_20%_98%)]"
+		></svg>
 	</div>
 
 	<div class="space-y-6">
-		<article class="prose w-full">
+		<article class="prose w-full dark:prose-invert">
 			<h1>Default D3 Chart</h1>
 			<p>
 				By default, <code>d3.ScaleLinear</code> tries to create 10 ticks using the
 				<code>d3.ticks(start, stop, count)</code>
 				function.
+			</p>
+			<p class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
+				Want to know how the nice function works? . See: <a href="/nice">Nice function demo</a>
 			</p>
 
 			<h2>
@@ -207,7 +203,7 @@
 						math={'\\text{magnitude} =  \\lfloor\\log_{10}\\left(\\text{step}\\right)\\rfloor'}
 					/>
 
-					<div class="border-l-4 bg-gray-100 text-sm">
+					<div class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
 						The parentheses around log10(step) mean a floor function
 					</div>
 					<Katex math={`\\text{Step 1: }  = \\log_{10}(\\text{step}) = ${Math.log10(step)}`} />
@@ -251,7 +247,7 @@
 					<Katex math={`\\text{round}\\left( \\frac{\\text{${stop}}}{\\text{${inc}}} \\right)`} /> =
 					{i2}
 					<br />
-					<div class="border-l-4 bg-gray-100 text-sm">
+					<div class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
 						<code>i1</code> and <code>i2</code> are the indices that represent the first (<code
 							>i1</code
 						>) and the last (<code>i2</code>) tick values in the range between <code>start</code>
@@ -261,7 +257,7 @@
 				<li>
 					Resulting ticks = {d3.ticks(start, stop, count)}
 				</li>
-				<p class="border-l-4 bg-gray-100 text-sm">
+				<p class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
 					The full code also handles the cases where start is greater then stop. And when power is
 					negative. See: <a href="https://github.com/d3/d3-array/blob/main/src/ticks.js"
 						>github.com/d3/d3-array/blob/src/ticks.js</a
@@ -271,3 +267,6 @@
 		</article>
 	</div>
 </div>
+
+<style>
+</style>

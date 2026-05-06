@@ -1,56 +1,37 @@
 <script lang="ts">
-	import * as d3 from 'd3';
+	import { scaleBand, scaleLinear } from 'd3-scale';
+	import { axisBottom, axisLeft } from 'd3-axis';
+	import { extent, ticks } from 'd3-array';
+	import { select } from 'd3-selection';
 	import Katex from './Katex.svelte';
 	import { base } from '$app/paths';
 
 	let svgElement: SVGSVGElement;
-	let containerDiv: HTMLDivElement;
+	let chartFrame: HTMLDivElement;
 	let width = $state(600);
 	let height = $state(400);
-	const marginTop = $state(60);
-	const marginRight = $state(60);
-	const marginBottom = $state(60);
-	const marginLeft = $state(60);
+	const marginTop = 60;
+	const marginRight = 60;
+	const marginBottom = 60;
+	const marginLeft = 60;
 
 	let data = $state([
-		{
-			x: 'A',
-			y: 4
-		},
-		{
-			x: 'B',
-			y: 8
-		},
-		{
-			x: 'C',
-			y: 15
-		},
-		{
-			x: 'D',
-			y: 16
-		},
-		{
-			x: 'E',
-			y: 23
-		},
-		{
-			x: 'F',
-			y: 45
-		},
-		{
-			x: 'G',
-			y: 2
-		}
+		{ x: 'A', y: 4 },
+		{ x: 'B', y: 8 },
+		{ x: 'C', y: 15 },
+		{ x: 'D', y: 16 },
+		{ x: 'E', y: 23 },
+		{ x: 'F', y: 45 },
+		{ x: 'G', y: 2 }
 	]);
 
-	let domain = $state(d3.extent(data, (d) => d.y) as [number, number]);
-
+	let domain = $state(extent(data, (d) => d.y) as [number, number]);
 	let nice = $state(true);
+	let count = $state(10);
 
-	// For the tick steps explanation
+	// Tick algorithm explanation
 	let start = $derived(domain[0]);
 	let stop = $derived(domain[1]);
-	let count = $state(10);
 	let step = $derived((stop - start) / count);
 	let power = $derived(Math.floor(Math.log10(step)));
 	let error = $derived(step / Math.pow(10, power));
@@ -62,104 +43,96 @@
 	let i2 = $derived(Math.round(stop / inc));
 
 	let xScale = $derived(
-		d3
-			.scaleBand()
+		scaleBand()
 			.domain(data.map((d) => d.x))
 			.range([marginLeft, width - marginRight])
 			.padding(0.1)
 	);
 
 	let yScale = $derived.by(() => {
-		let yScale = d3
-			.scaleLinear()
+		const s = scaleLinear()
 			.domain(domain)
 			.range([height - marginBottom, marginTop]);
+		return nice ? s.nice(count) : s;
+	});
 
-		return nice ? yScale.nice(count) : yScale;
+	// Bar baseline must clamp to the visible range so bars sit on the x-axis
+	// even when nice() expands the domain past zero or to negatives.
+	let baselineY = $derived(yScale(Math.max(0, yScale.domain()[0])));
+
+	$effect(() => {
+		if (!chartFrame) return;
+		const observer = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const { width: w, height: h } = entry.contentRect;
+				width = w;
+				height = h;
+			}
+		});
+		observer.observe(chartFrame);
+		return () => observer.disconnect();
 	});
 
 	$effect(() => {
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const { width: w, height: h } = entry.contentRect;
+		if (!svgElement) return;
+		const svg = select(svgElement).attr('width', width).attr('height', height);
+		svg.selectAll('*').remove();
 
-				requestAnimationFrame(() => {
-					width = w;
-					height = 600;
-				});
-			}
-		});
+		svg.append('g').attr('transform', `translate(0,${baselineY})`).call(axisBottom(xScale));
 
-		resizeObserver.observe(containerDiv);
-
-		svgElement.innerHTML = '';
-
-		// Create the SVG container.
-		const svg = d3.select(svgElement).attr('width', width).attr('height', height);
-
-		// Add the x-axis.
 		svg
 			.append('g')
-			.attr('transform', `translate(0,${height - marginBottom})`)
-			.call(d3.axisBottom(xScale));
+			.attr('transform', `translate(${marginLeft},0)`)
+			.call(axisLeft(yScale).ticks(count));
 
-		// Add the y-axis.
-		const axisGenerator = d3.axisLeft(yScale);
-		axisGenerator.ticks(count);
-		svg.append('g').attr('transform', `translate(${marginLeft},0)`).call(axisGenerator);
-
-		// Add the bars.
 		svg
 			.append('g')
 			.selectAll('rect')
 			.data(data)
 			.join('rect')
-			.attr('x', (d) => xScale(d.x)!)
-			.attr('y', (d) => yScale(d.y))
-			.attr('height', (d) => {
-				let height = yScale(yScale.domain()[0]) - yScale(d.y);
-				console.log({ height, d, range: yScale.range(), domain: yScale.domain() });
-				return height < 0 ? 0 : height;
-			})
+			.attr('x', (d) => xScale(d.x) ?? 0)
+			.attr('y', (d) => Math.min(yScale(d.y), baselineY))
+			.attr('height', (d) => Math.max(0, Math.abs(baselineY - yScale(d.y))))
 			.attr('width', xScale.bandwidth());
-
-		return () => {
-			resizeObserver.disconnect();
-		};
 	});
 </script>
 
 <div class="container mx-auto grid space-y-6 p-6 lg:grid-cols-2 lg:gap-6">
-	<!-- Sticky Chart Container -->
 	<div
-		bind:this={containerDiv}
-		class="top-6 w-full rounded-lg border border-gray-200 p-4 pb-8 shadow-sm lg:sticky lg:h-[calc(100vh-3rem)] dark:border-gray-800"
+		class="top-6 flex w-full flex-col rounded-lg border border-gray-200 p-4 pb-8 shadow-sm lg:sticky lg:h-[calc(100vh-3rem)] dark:border-gray-800"
 	>
-		<div class="prose mx-4 flex flex-col flex-wrap gap-4 dark:prose-invert">
+		<div class="prose mx-4 flex shrink-0 flex-col flex-wrap gap-4 dark:prose-invert">
 			<label class="flex flex-col gap-1">
 				<span class="text-sm font-medium">Min domain</span>
 				<input type="number" class="input" required bind:value={domain[0]} />
 			</label>
 			<label class="flex flex-col gap-1">
 				<span class="text-sm font-medium">Max domain</span>
-				<input type="number" class="input" required bind:value={domain[domain.length - 1]} />
+				<input type="number" class="input" required bind:value={domain[1]} />
 			</label>
 			<label class="flex flex-col gap-1">
 				<span class="text-sm font-medium">Count</span>
 				<input type="number" class="input" required bind:value={count} />
 			</label>
 			<label class="flex cursor-pointer flex-row items-center">
-				<input type="checkbox" value={nice} bind:checked={nice} class="peer sr-only" />
+				<input
+					type="checkbox"
+					bind:checked={nice}
+					aria-label="Apply nice function"
+					class="peer sr-only"
+				/>
 				<div
 					class="peer relative h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rtl:peer-checked:after:-translate-x-full dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"
 				></div>
 				<span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Nice function</span>
 			</label>
 		</div>
-		<svg
-			bind:this={svgElement}
-			class="h-full w-full fill-red-500 text-[hsl(224_71.4%_4.1%)] dark:text-[hsl(210_20%_98%)]"
-		></svg>
+		<div bind:this={chartFrame} class="min-h-80 min-w-0 flex-1 overflow-hidden lg:min-h-0">
+			<svg
+				bind:this={svgElement}
+				class="block h-full w-full fill-red-500 text-[hsl(224_71.4%_4.1%)] dark:text-[hsl(210_20%_98%)]"
+			></svg>
+		</div>
 	</div>
 
 	<div class="space-y-6">
@@ -171,8 +144,7 @@
 				function.
 			</p>
 			<p class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
-				Want to know how the nice function works? . See: <a href="{base}/nice">Nice function demo</a
-				>
+				Want to know how the nice function works? See: <a href="{base}/nice">Nice function demo</a>
 			</p>
 
 			<h2>
@@ -190,7 +162,6 @@
 					The raw step size is calculated like:
 					<Katex
 						math={`\\text{step} = \\frac{\\text{stop} - \\text{start}}{\\max(0, \\text{count})}`}
-						displayMode={false}
 					/>
 				</li>
 
@@ -200,7 +171,7 @@
 
 				<li>
 					Find the magnitude of the step size by taking the base-10 logarithm of the step and
-					flooring it :
+					flooring it:
 					<Katex
 						math={'\\text{magnitude} =  \\lfloor\\log_{10}\\left(\\text{step}\\right)\\rfloor'}
 					/>
@@ -257,18 +228,16 @@
 					</div>
 				</li>
 				<li>
-					Resulting ticks = {d3.ticks(start, stop, count)}
+					Resulting ticks = {ticks(start, stop, count)}
 				</li>
 				<p class="border-l-2 bg-gray-100 pl-1 text-sm dark:bg-gray-900">
-					The full code also handles the cases where start is greater then stop. And when power is
-					negative. See: <a href="https://github.com/d3/d3-array/blob/main/src/ticks.js"
-						>github.com/d3/d3-array/blob/src/ticks.js</a
-					>
+					The full code also handles the cases where start is greater then stop, and when power is
+					negative. See:
+					<a href="https://github.com/d3/d3-array/blob/main/src/ticks.js">
+						github.com/d3/d3-array/blob/src/ticks.js
+					</a>
 				</p>
 			</ol>
 		</article>
 	</div>
 </div>
-
-<style>
-</style>

@@ -1,18 +1,23 @@
 <script lang="ts">
 	import type { KatexOptions } from 'katex';
 	import katex from 'katex';
-	export let math;
-	export let displayMode = false;
+
+	let { math, displayMode = false }: { math: string; displayMode?: boolean } = $props();
 
 	const options: KatexOptions = {
-		displayMode: displayMode,
 		throwOnError: false,
 		output: 'mathml'
 	};
 
-	$: katexString = katex.renderToString(math, options);
+	let katexString = $derived(katex.renderToString(math, { ...options, displayMode }));
 </script>
 
-<div class=" m-1 inline-block rounded bg-blue-100 p-1 dark:bg-blue-900">
-	{@html katexString}
-</div>
+{#if displayMode}
+	<div class="m-1 block rounded bg-blue-100 p-1 dark:bg-blue-900">
+		{@html katexString}
+	</div>
+{:else}
+	<span class="m-1 inline-block rounded bg-blue-100 p-1 dark:bg-blue-900">
+		{@html katexString}
+	</span>
+{/if}

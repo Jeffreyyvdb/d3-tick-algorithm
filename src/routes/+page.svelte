@@ -7,7 +7,7 @@
 	import { base } from '$app/paths';
 
 	let svgElement: SVGSVGElement;
-	let containerDiv: HTMLDivElement;
+	let chartFrame: HTMLDivElement;
 	let width = $state(600);
 	let height = $state(400);
 	const marginTop = 60;
@@ -61,7 +61,7 @@
 	let baselineY = $derived(yScale(Math.max(0, yScale.domain()[0])));
 
 	$effect(() => {
-		if (!containerDiv) return;
+		if (!chartFrame) return;
 		const observer = new ResizeObserver((entries) => {
 			for (const entry of entries) {
 				const { width: w, height: h } = entry.contentRect;
@@ -69,7 +69,7 @@
 				height = h;
 			}
 		});
-		observer.observe(containerDiv);
+		observer.observe(chartFrame);
 		return () => observer.disconnect();
 	});
 
@@ -78,10 +78,7 @@
 		const svg = select(svgElement).attr('width', width).attr('height', height);
 		svg.selectAll('*').remove();
 
-		svg
-			.append('g')
-			.attr('transform', `translate(0,${baselineY})`)
-			.call(axisBottom(xScale));
+		svg.append('g').attr('transform', `translate(0,${baselineY})`).call(axisBottom(xScale));
 
 		svg
 			.append('g')
@@ -102,10 +99,9 @@
 
 <div class="container mx-auto grid space-y-6 p-6 lg:grid-cols-2 lg:gap-6">
 	<div
-		bind:this={containerDiv}
-		class="top-6 w-full rounded-lg border border-gray-200 p-4 pb-8 shadow-sm lg:sticky lg:h-[calc(100vh-3rem)] dark:border-gray-800"
+		class="top-6 flex w-full flex-col rounded-lg border border-gray-200 p-4 pb-8 shadow-sm lg:sticky lg:h-[calc(100vh-3rem)] dark:border-gray-800"
 	>
-		<div class="prose mx-4 flex flex-col flex-wrap gap-4 dark:prose-invert">
+		<div class="prose mx-4 flex shrink-0 flex-col flex-wrap gap-4 dark:prose-invert">
 			<label class="flex flex-col gap-1">
 				<span class="text-sm font-medium">Min domain</span>
 				<input type="number" class="input" required bind:value={domain[0]} />
@@ -131,10 +127,12 @@
 				<span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Nice function</span>
 			</label>
 		</div>
-		<svg
-			bind:this={svgElement}
-			class="h-full w-full fill-red-500 text-[hsl(224_71.4%_4.1%)] dark:text-[hsl(210_20%_98%)]"
-		></svg>
+		<div bind:this={chartFrame} class="min-h-80 min-w-0 flex-1 overflow-hidden lg:min-h-0">
+			<svg
+				bind:this={svgElement}
+				class="block h-full w-full fill-red-500 text-[hsl(224_71.4%_4.1%)] dark:text-[hsl(210_20%_98%)]"
+			></svg>
+		</div>
 	</div>
 
 	<div class="space-y-6">
